@@ -12,7 +12,7 @@ import com.sam_chordas.android.stockhawk.R;
 /**
  * Created by Tauseef Ahmad on 8/3/2016.
  */
-public class WidgetProvider  extends AppWidgetProvider {
+public class MyWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // update each of the app widgets with the remote adapter

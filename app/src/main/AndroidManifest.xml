@@ -18,9 +18,8 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
-
         <activity
-            android:name="com.sam_chordas.android.stockhawk.ui.MyStocksActivity"
+            android:name=".ui.MyStocksActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,30 +29,35 @@
         </activity>
 
         <service
-            android:name="com.sam_chordas.android.stockhawk.service.StockTaskService"
+            android:name=".service.StockTaskService"
             android:exported="true"
             android:permission="com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE">
             <intent-filter>
                 <action android:name="com.google.android.gms.gcm.ACTION_TASK_READY" />
             </intent-filter>
         </service>
-        <service android:name="com.sam_chordas.android.stockhawk.service.StockIntentService" />
+        <service android:name=".service.StockIntentService" />
 
         <provider
-            android:name="com.sam_chordas.android.stockhawk.data.generated.QuoteProvider"
+            android:name=".data.generated.QuoteProvider"
             android:authorities="com.sam_chordas.android.stockhawk.data.QuoteProvider"
             android:exported="false" />
 
-        <receiver android:name=".widget.WidgetProvider">
+        <receiver android:name=".widget.MyWidgetProvider">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
+
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
         </receiver>
-<service android:name=".widget.MyRemoteViewService" android:permission="android.permission.BIND_REMOTEVIEWS"/>
 
+        <service
+            android:name=".widget.MyRemoteViewService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <activity android:name=".ui.GraphActivity"></activity>
     </application>
 
 </manifest>

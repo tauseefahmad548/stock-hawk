@@ -12,9 +12,8 @@
         android:id="@+id/widget_empty_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/widget_item_background"
         android:gravity="center"
-        android:text="@string/empty_view_text"
+        android:text=""
         android:textColor="#ffffff"
         android:textSize="20sp"
         android:textStyle="bold" />
