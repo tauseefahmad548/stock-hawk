@@ -1,20 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <ListView
-        android:id="@+id/widget_list_view"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    <TextView
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="16dp"
+        android:textColor="@color/primary_text_dark"
+        android:background="@color/material_blue_500"
+        android:text="Stock Hawk"/>
 
-    <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/widget_empty_view"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text=""
-        android:textColor="#ffffff"
-        android:textSize="20sp"
-        android:textStyle="bold" />
-</FrameLayout>
+        android:layout_height="match_parent">
+
+        <ListView
+            android:id="@+id/widget_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/widget_empty_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#ffffff"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+</LinearLayout>

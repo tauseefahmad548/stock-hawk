@@ -11,4 +11,8 @@
     <string name="input_prefill" translatable="false"></string>
     <string name="network_toast" translatable="false">Uh-oh! This app requires an internet connection</string>
     <string name="stock_already_saved" translatable="false">This stock is already saved!</string>
+    <string name="network_error">Netwrok error</string>
+    <string name="loading_data">Loading data...</string>
+    <string name="no_data_available_yet">No data available yet</string>
+    <string name="historical_data">Stock line Graph</string>
 </resources>

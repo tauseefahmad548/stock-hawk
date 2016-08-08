@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -51,23 +50,27 @@ public class QuoteCursorAdapter extends CursorRecyclerViewAdapter<QuoteCursorAda
     public void onBindViewHolder(final ViewHolder viewHolder, final Cursor cursor) {
         viewHolder.symbol.setText(cursor.getString(cursor.getColumnIndex("symbol")));
         viewHolder.bidPrice.setText(cursor.getString(cursor.getColumnIndex("bid_price")));
-        int sdk = Build.VERSION.SDK_INT;
+//        int sdk = Build.VERSION.SDK_INT;
         if (cursor.getInt(cursor.getColumnIndex("is_up")) == 1) {
-            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
-                viewHolder.change.setBackgroundDrawable(
-                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
-            } else {
-                viewHolder.change.setBackground(
-                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
-            }
+            viewHolder.change.setBackgroundResource(R.drawable.percent_change_pill_green);
+
+//            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
+//                viewHolder.change.setBackgroundDrawable(
+//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
+//            } else {
+//                viewHolder.change.setBackground(
+//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
+//            }
         } else {
-            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
-                viewHolder.change.setBackgroundDrawable(
-                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
-            } else {
-                viewHolder.change.setBackground(
-                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
-            }
+            viewHolder.change.setBackgroundResource(R.drawable.percent_change_pill_red);
+
+//            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
+//                viewHolder.change.setBackgroundDrawable(
+//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
+//            } else {
+//                viewHolder.change.setBackground(
+//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
+//            }
         }
         if (Utils.showPercent) {
             viewHolder.change.setText(cursor.getString(cursor.getColumnIndex("percent_change")));
