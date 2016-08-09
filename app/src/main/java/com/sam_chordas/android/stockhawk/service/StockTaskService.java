@@ -53,10 +53,7 @@ public class StockTaskService extends GcmTaskService {
     }
 
     String fetchData(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
+        Request request = new Request.Builder().url(url).build();
         Response response = client.newCall(request).execute();
         return response.body().string();
     }
@@ -71,8 +68,7 @@ public class StockTaskService extends GcmTaskService {
         try {
             // Base URL for the Yahoo query
             urlStringBuilder.append("https://query.yahooapis.com/v1/public/yql?q=");
-            urlStringBuilder.append(URLEncoder.encode("select * from yahoo.finance.quotes where symbol "
-                    + "in (", "UTF-8"));
+            urlStringBuilder.append(URLEncoder.encode("select * from yahoo.finance.quotes where symbol " + "in (", "UTF-8"));
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
@@ -132,14 +128,20 @@ public class StockTaskService extends GcmTaskService {
                     // update ISCURRENT to 0 (false) so new data is current
                     if (isUpdate) {
                         contentValues.put(QuoteColumns.ISCURRENT, 0);
-                        mContext.getContentResolver().update(QuoteProvider.Quotes.CONTENT_URI, contentValues,
-                                null, null);
+                        mContext.getContentResolver().update(QuoteProvider.Quotes.CONTENT_URI, contentValues, null, null);
                     }
                     ArrayList<ContentProviderOperation> contentProviderOperationArrayList = Utils.quoteJsonToContentVals(getResponse);
-                    if (contentProviderOperationArrayList!= null) {
+                    if (contentProviderOperationArrayList != null) {
                         mContext.getContentResolver().applyBatch(QuoteProvider.AUTHORITY, contentProviderOperationArrayList);
+                        if (isUpdate) {
+                            LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(MyStocksActivity.ACTION_FINISHED_LOADING_QUOTES));
+                        } else {
+                            LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(MyStocksActivity.ACTION_SYM_ADDED));
+                        }
                     } else {
-                        LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(MyStocksActivity.ACTION_NO_SYM_ALERT));
+                        if (!isUpdate) {
+                            LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(MyStocksActivity.ACTION_NO_SYM_ALERT));
+                        }
                     }
                 } catch (RemoteException | OperationApplicationException e) {
                     Log.e(LOG_TAG, "Error applying batch insert", e);

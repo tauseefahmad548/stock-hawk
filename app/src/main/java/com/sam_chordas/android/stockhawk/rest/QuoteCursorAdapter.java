@@ -1,12 +1,10 @@
 package com.sam_chordas.android.stockhawk.rest;
 
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,7 +15,6 @@ import com.sam_chordas.android.stockhawk.data.QuoteColumns;
 import com.sam_chordas.android.stockhawk.data.QuoteProvider;
 import com.sam_chordas.android.stockhawk.touch_helper.ItemTouchHelperAdapter;
 import com.sam_chordas.android.stockhawk.touch_helper.ItemTouchHelperViewHolder;
-import com.sam_chordas.android.stockhawk.ui.GraphActivity;
 
 /**
  * Created by sam_chordas on 10/6/15.
@@ -49,28 +46,12 @@ public class QuoteCursorAdapter extends CursorRecyclerViewAdapter<QuoteCursorAda
     @Override
     public void onBindViewHolder(final ViewHolder viewHolder, final Cursor cursor) {
         viewHolder.symbol.setText(cursor.getString(cursor.getColumnIndex("symbol")));
+        viewHolder.symbol.setTag(cursor.getString(cursor.getColumnIndex("last_updated")));
         viewHolder.bidPrice.setText(cursor.getString(cursor.getColumnIndex("bid_price")));
-//        int sdk = Build.VERSION.SDK_INT;
         if (cursor.getInt(cursor.getColumnIndex("is_up")) == 1) {
             viewHolder.change.setBackgroundResource(R.drawable.percent_change_pill_green);
-
-//            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
-//                viewHolder.change.setBackgroundDrawable(
-//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
-//            } else {
-//                viewHolder.change.setBackground(
-//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_green));
-//            }
         } else {
             viewHolder.change.setBackgroundResource(R.drawable.percent_change_pill_red);
-
-//            if (sdk < Build.VERSION_CODES.JELLY_BEAN) {
-//                viewHolder.change.setBackgroundDrawable(
-//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
-//            } else {
-//                viewHolder.change.setBackground(
-//                        mContext.getResources().getDrawable(R.drawable.percent_change_pill_red));
-//            }
         }
         if (Utils.showPercent) {
             viewHolder.change.setText(cursor.getString(cursor.getColumnIndex("percent_change")));
@@ -94,14 +75,16 @@ public class QuoteCursorAdapter extends CursorRecyclerViewAdapter<QuoteCursorAda
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder
-            implements ItemTouchHelperViewHolder, View.OnClickListener {
+            implements ItemTouchHelperViewHolder
+//            , View.OnClickListener
+    {
         public final TextView symbol;
         public final TextView bidPrice;
         public final TextView change;
 
         public ViewHolder(View itemView) {
             super(itemView);
-            itemView.setOnClickListener(this);
+//            itemView.setOnClickListener(this);
             symbol = (TextView) itemView.findViewById(R.id.stock_symbol);
             symbol.setTypeface(robotoLight);
             bidPrice = (TextView) itemView.findViewById(R.id.bid_price);
@@ -118,12 +101,12 @@ public class QuoteCursorAdapter extends CursorRecyclerViewAdapter<QuoteCursorAda
             itemView.setBackgroundColor(0);
         }
 
-        @Override
-        public void onClick(View v) {
-            Log.w("tauseef","onclick");
-            Intent intent = new Intent(mContext, GraphActivity.class);
-            intent.putExtra(GraphActivity.EXTRA_SYMBOL, symbol.getText());
-            mContext.startActivity(intent);
-        }
+//        @Override
+//        public void onClick(View v) {
+//            Log.w("tauseef","onclick");
+//            Intent intent = new Intent(mContext, GraphActivity.class);
+//            intent.putExtra(GraphActivity.EXTRA_SYMBOL, symbol.getText());
+//            mContext.startActivity(intent);
+//        }
     }
 }

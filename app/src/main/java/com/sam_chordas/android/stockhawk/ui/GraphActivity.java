@@ -1,8 +1,8 @@
 package com.sam_chordas.android.stockhawk.ui;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.MotionEvent;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -18,27 +18,27 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
-import com.github.mikephil.charting.listener.ChartTouchListener;
-import com.github.mikephil.charting.listener.OnChartGestureListener;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.sam_chordas.android.stockhawk.R;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-public class GraphActivity extends Activity implements OnChartValueSelectedListener, OnChartGestureListener {
+public class GraphActivity extends Activity implements OnChartValueSelectedListener{
     public static final String EXTRA_SYMBOL = "quote_symbol";
+    public static final String EXTRA_START_DATE = "start_date";
+    public static final String EXTRA_END_DATE = "end_date";
     public static final String KEY_OPEN = "Open";
     public static final String KEY_CLOSE = "Close";
     public static final String KEY_HIGH = "High";
     public static final String KEY_LOW = "Low";
     public static final String KEY_VOLUME = "Volume";
     public static final String KEY_DATE = "Date";
-    private TextView startDateTextView;
-    private TextView endDateTextView;
+    public static final String RESPONSE = "response";
     private TextView selectedDateTextView;
     private TextView openBidPriceTextView;
     private TextView closeBidPriceTextView;
@@ -49,7 +49,8 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
     private LineChart lineChart;
     private ArrayList<LinkedHashMap<String, String>> historicalData;
     private ArrayList<String> xValsDaysList;
-    private String response;
+    private String httpResponse;
+    private String symbol;
 
 
     @Override
@@ -57,12 +58,13 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
         requestQueue = Volley.newRequestQueue(this);
-        String symbol = getIntent().getStringExtra(EXTRA_SYMBOL);
+        Intent intent = getIntent();
+        symbol = intent.getStringExtra(EXTRA_SYMBOL);
+        String startDate = intent.getStringExtra(EXTRA_START_DATE);
+        String endDate = intent.getStringExtra(EXTRA_END_DATE);
         historicalData = new ArrayList<>();
         xValsDaysList = new ArrayList<>();
 
-        startDateTextView = (TextView) findViewById(R.id.start_date_text_view);
-        endDateTextView = (TextView) findViewById(R.id.end_date_text_view);
         selectedDateTextView = (TextView) findViewById(R.id.selected_date_text_view);
         openBidPriceTextView = (TextView) findViewById(R.id.start_bid_price_text_view);
         closeBidPriceTextView = (TextView) findViewById(R.id.close_bid_price_text_view);
@@ -72,7 +74,7 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
 
         lineChart = (LineChart) findViewById(R.id.line_chart);
 
-//        lineChart.setDescription("chart description");
+        lineChart.setDescription("");
         lineChart.setNoDataTextDescription(getString(R.string.no_data_available_yet));
         lineChart.setDrawGridBackground(false);
         lineChart.setPinchZoom(true);
@@ -80,9 +82,22 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
         lineChart.setTouchEnabled(true);
         lineChart.setDragEnabled(true);
         lineChart.setDrawBorders(true);
-        lineChart.setOnChartGestureListener(this);
+        lineChart.getXAxis().setTextColor(getResources().getColor(R.color.primary_text_dark));
+        lineChart.getAxisLeft().setTextColor(getResources().getColor(R.color.primary_text_dark));
+        lineChart.getAxisRight().setTextColor(getResources().getColor(R.color.primary_text_dark));
         lineChart.setOnChartValueSelectedListener(this);
-        fetchHistoricalData(symbol, "2015-01-01", "2016-02-02");
+        if (savedInstanceState == null) {
+            fetchHistoricalData(symbol, startDate, endDate);
+        } else {
+            httpResponse = savedInstanceState.getString(RESPONSE);
+            JSONObject jsonObject = null;
+            try {
+                jsonObject = new JSONObject(httpResponse);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            processJsonData(jsonObject);
+        }
 
     }
 
@@ -93,6 +108,7 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
+                httpResponse = response.toString();
                 int count = response.optJSONObject("query").optInt("count");
                 if (count > 0) {
                     xValsDaysList.clear();
@@ -137,15 +153,15 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
             xVals.add(oneDayData.get(KEY_DATE));
         }
 
-        LineDataSet lineDataSet = new LineDataSet(yVals, getString(R.string.historical_data));
+        LineDataSet lineDataSet = new LineDataSet(yVals, symbol);
+        lineDataSet.setCircleRadius(2f);
         ArrayList<ILineDataSet> dataSets = new ArrayList<>();
         dataSets.add(lineDataSet);
         LineData data = new LineData(xVals,dataSets);
+        data.setValueTextColor(getResources().getColor(R.color.primary_text_dark));
         lineChart.setData(data);
+        lineChart.getLegend().setTextColor(getResources().getColor(R.color.primary_text_dark));
         lineChart.animateY(3000, Easing.EasingOption.EaseOutBack);
-//        startDateTextView.setText(historicalData.get(lineChart.getLowestVisibleXIndex()).get(KEY_DATE));
-//        endDateTextView.setText(historicalData.get(lineChart.getHighestVisibleXIndex()).get(KEY_DATE));
-        refreshDateLabels();
     }
 
 
@@ -167,42 +183,30 @@ public class GraphActivity extends Activity implements OnChartValueSelectedListe
     }
 
     @Override
-    public void onChartGestureStart(MotionEvent me, ChartTouchListener.ChartGesture lastPerformedGesture) {
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putString(RESPONSE,httpResponse);
+        super.onSaveInstanceState(outState);
     }
-
-    @Override
-    public void onChartGestureEnd(MotionEvent me, ChartTouchListener.ChartGesture lastPerformedGesture) {
-    }
-
-    @Override
-    public void onChartLongPressed(MotionEvent me) {
-    }
-
-    @Override
-    public void onChartDoubleTapped(MotionEvent me) {
-        refreshDateLabels();
-    }
-
-    @Override
-    public void onChartSingleTapped(MotionEvent me) {
-    }
-
-    @Override
-    public void onChartFling(MotionEvent me1, MotionEvent me2, float velocityX, float velocityY) {
-    }
-
-    @Override
-    public void onChartScale(MotionEvent me, float scaleX, float scaleY) {
-        refreshDateLabels();
-    }
-
-    @Override
-    public void onChartTranslate(MotionEvent me, float dX, float dY) {
-        refreshDateLabels();
-    }
-
-    private void refreshDateLabels() {
-        startDateTextView.setText(historicalData.get(lineChart.getLowestVisibleXIndex()).get(KEY_DATE));
-        endDateTextView.setText(historicalData.get(lineChart.getHighestVisibleXIndex()).get(KEY_DATE));
+    private void processJsonData(JSONObject response){
+        int count = response.optJSONObject("query").optInt("count");
+        if (count > 0) {
+            xValsDaysList.clear();
+            historicalData.clear();
+            JSONArray results = response.optJSONObject("query").optJSONObject("results").optJSONArray("quote");
+            for (int i = count - 1; i > -1; i--) {
+                JSONObject result = results.optJSONObject(i);
+                LinkedHashMap<String, String> oneDayData = new LinkedHashMap<>();
+                oneDayData.put(KEY_DATE, result.optString(KEY_DATE));
+                oneDayData.put(KEY_OPEN, result.optString(KEY_OPEN));
+                oneDayData.put(KEY_CLOSE, result.optString(KEY_CLOSE));
+                oneDayData.put(KEY_HIGH, result.optString(KEY_HIGH));
+                oneDayData.put(KEY_LOW, result.optString(KEY_LOW));
+                oneDayData.put(KEY_VOLUME, result.optString(KEY_VOLUME));
+                xValsDaysList.add(result.optString(KEY_DATE));
+                historicalData.add(oneDayData);
+            }
+            setData(historicalData);
+            onValueSelected(new Entry(0, 0),0,new Highlight(0,0));
+        }
     }
 }

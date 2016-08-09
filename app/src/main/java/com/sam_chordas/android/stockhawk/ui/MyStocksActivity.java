@@ -12,7 +12,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.ActionBar;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -22,6 +22,8 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.MaterialDialog;
@@ -41,16 +43,11 @@ import com.sam_chordas.android.stockhawk.touch_helper.SimpleItemTouchHelperCallb
 
 public class MyStocksActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    /**
-     * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
-     */
 
-    /**
-     * Used to store the last screen title. For use in {@link #restoreActionBar()}.
-     */
     public static final String ACTION_UPDATE_UI = "update_MyStockActivity";
     public static final String ACTION_NO_SYM_ALERT = "no_such_symbol";
-    private CharSequence mTitle;
+    public static final String ACTION_SYM_ADDED = "symbol_added";
+    public static final String ACTION_FINISHED_LOADING_QUOTES = "finished_loading_quote";
     private Intent mServiceIntent;
     private ItemTouchHelper mItemTouchHelper;
     private static final int CURSOR_LOADER_ID = 0;
@@ -60,62 +57,57 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
     private Cursor mCursor;
     boolean isConnected;
     MaterialDialog dialog;
+    ProgressBar addQuoteProgressBar;
+    ProgressBar loadingProgressBar;
+    TextView noDataTextView;
+    SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mContext = this;
-        ConnectivityManager cm =
-                (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
         setContentView(R.layout.activity_my_stocks);
+        mContext = this;
+        noDataTextView = (TextView) findViewById(R.id.no_data_text_view);
+        addQuoteProgressBar = (ProgressBar) findViewById(R.id.add_symbol_progress_bar);
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_layout);
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        localBroadcastReceiver = new MyLocalReceiver();
 
-        localBroadcastReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                switch (action) {
-                    case ACTION_NO_SYM_ALERT:
-                        dialog.dismiss();
-                        Toast.makeText(MyStocksActivity.this, "No such symbol found", Toast.LENGTH_LONG).show();
-                        break;
-                    case ACTION_UPDATE_UI:
-                        break;
-                    default:
-                }
-            }
-        };
+        ConnectivityManager cm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+
+
         // The intent service is for executing immediate pulls from the Yahoo API
         // GCMTaskService can only schedule tasks, they cannot execute immediately
-        mServiceIntent = new Intent(this, StockIntentService.class);
-        if (savedInstanceState == null) {
-            // Run the initialize task service so that some stocks appear upon an empty database
-            mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_INIT);
-            if (isConnected) {
-                startService(mServiceIntent);
-            } else {
-                networkToast();
-            }
-        }
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         getLoaderManager().initLoader(CURSOR_LOADER_ID, null, this);
-
         mCursorAdapter = new QuoteCursorAdapter(this, null);
+
+        recyclerView.setAdapter(mCursorAdapter);
+        ItemTouchHelper.Callback callback = new SimpleItemTouchHelperCallback(mCursorAdapter);
+        mItemTouchHelper = new ItemTouchHelper(callback);
+        mItemTouchHelper.attachToRecyclerView(recyclerView);
+
+
         recyclerView.addOnItemTouchListener(new RecyclerViewItemClickListener(this,
                 new RecyclerViewItemClickListener.OnItemClickListener() {
                     @Override
                     public void onItemClick(View v, int position) {
-                        //TODO:
-                        // do something on item click
+                        TextView symbolTextView = (TextView) v.findViewById(R.id.stock_symbol);
+                        String symbol = symbolTextView.getText().toString();
+                        String endDate = symbolTextView.getTag().toString();
+                        //one year prior to date when last update ocurred.
+                        String startDate = String.valueOf(Integer.valueOf(endDate.substring(0, 4)) - 1) + endDate.substring(4, 10);
+                        Intent intent = new Intent(mContext, GraphActivity.class);
+                        intent.putExtra(GraphActivity.EXTRA_SYMBOL, symbol);
+                        intent.putExtra(GraphActivity.EXTRA_START_DATE, startDate);
+                        intent.putExtra(GraphActivity.EXTRA_END_DATE, endDate);
+                        startActivity(intent);
                     }
                 }));
-        recyclerView.setAdapter(mCursorAdapter);
 
-dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symbol").build();
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.attachToRecyclerView(recyclerView);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -130,21 +122,25 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
                                 public void onInput(MaterialDialog dialog, CharSequence input) {
                                     // On FAB click, receive user input. Make sure the stock doesn't already exist
                                     // in the DB and proceed accordingly
-                                    Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
-                                            new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
-                                            new String[]{input.toString()}, null);
-                                    if (c.getCount() != 0) {
-                                        Toast toast =
-                                                Toast.makeText(MyStocksActivity.this, R.string.stock_already_saved,
-                                                        Toast.LENGTH_LONG);
-                                        toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
-                                        toast.show();
-                                        return;
+                                    if (input.length() > 0) {
+                                        Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
+                                                new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
+                                                new String[]{input.toString()}, null);
+                                        if (c.getCount() != 0) {
+                                            Toast toast =
+                                                    Toast.makeText(MyStocksActivity.this, R.string.stock_already_saved,
+                                                            Toast.LENGTH_LONG);
+                                            toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
+                                            toast.show();
+                                            return;
+                                        } else {
+                                            // Add the stock to DB
+                                            mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_ADD);
+                                            mServiceIntent.putExtra(StockTaskService.KEY_SYMBOL, input.toString());
+                                            startService(mServiceIntent);
+                                            addQuoteProgressBar.setVisibility(View.VISIBLE);
+                                        }
                                     } else {
-                                        // Add the stock to DB
-                                        mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_ADD);
-                                        mServiceIntent.putExtra(StockTaskService.KEY_SYMBOL, input.toString());
-                                        startService(mServiceIntent);
                                         dialog.show();
                                     }
                                 }
@@ -157,29 +153,37 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
             }
         });
 
-        ItemTouchHelper.Callback callback = new SimpleItemTouchHelperCallback(mCursorAdapter);
-        mItemTouchHelper = new ItemTouchHelper(callback);
-        mItemTouchHelper.attachToRecyclerView(recyclerView);
+        if (savedInstanceState == null) {
+            // Run the initialize task service so that some stocks appear upon an empty database
+            if (isConnected) {
+                swipeRefreshLayout.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        swipeRefreshLayout.setRefreshing(true);
+                    }
+                });
+                fetchLatestQuotes();
 
-        mTitle = getTitle();
-        if (isConnected) {
-            long period = 3600L;
-            long flex = 10L;
-
-            // create a periodic task to pull stocks once every hour after the app has been opened. This
-            // is so Widget data stays up to date.
-            PeriodicTask periodicTask = new PeriodicTask.Builder()
-                    .setService(StockTaskService.class)
-                    .setPeriod(period)
-                    .setFlex(flex)
-                    .setTag(StockTaskService.TAG_PERIODIC)
-                    .setRequiredNetwork(Task.NETWORK_STATE_CONNECTED)
-                    .setRequiresCharging(false)
-                    .build();
-            // Schedule task with tag "periodic." This ensure that only the stocks present in the DB
-            // are updated.
-            GcmNetworkManager.getInstance(this).schedule(periodicTask);
+                long period = 3600L;
+                long flex = 10L;
+                // create a periodic task to pull stocks once every hour after the app has been opened. This
+                // is so Widget data stays up to date.
+                PeriodicTask periodicTask = new PeriodicTask.Builder()
+                        .setService(StockTaskService.class)
+                        .setPeriod(period)
+                        .setFlex(flex)
+                        .setTag(StockTaskService.TAG_PERIODIC)
+                        .setRequiredNetwork(Task.NETWORK_STATE_CONNECTED)
+                        .setRequiresCharging(false)
+                        .build();
+                // Schedule task with tag "periodic." This ensure that only the stocks present in the DB
+                // are updated.
+                GcmNetworkManager.getInstance(this).schedule(periodicTask);
+            } else {
+                networkToast();
+            }
         }
+
     }
 
 
@@ -193,34 +197,22 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
         Toast.makeText(mContext, getString(R.string.network_toast), Toast.LENGTH_SHORT).show();
     }
 
-    public void restoreActionBar() {
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-        actionBar.setDisplayShowTitleEnabled(true);
-        actionBar.setTitle(mTitle);
-    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.my_stocks, menu);
-        restoreActionBar();
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_refresh) {
+            fetchLatestQuotes();
         }
 
         if (id == R.id.action_change_units) {
-            // this is for changing stock changes from percent value to dollar value
             Utils.showPercent = !Utils.showPercent;
             this.getContentResolver().notifyChange(QuoteProvider.Quotes.CONTENT_URI, null);
         }
@@ -233,7 +225,7 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
         // This narrows the return to only the stocks that are most current.
         return new CursorLoader(this, QuoteProvider.Quotes.CONTENT_URI,
                 new String[]{QuoteColumns._ID, QuoteColumns.SYMBOL, QuoteColumns.BIDPRICE,
-                        QuoteColumns.PERCENT_CHANGE, QuoteColumns.CHANGE, QuoteColumns.ISUP},
+                        QuoteColumns.PERCENT_CHANGE, QuoteColumns.CHANGE, QuoteColumns.ISUP, QuoteColumns.LAST_UPDATED},
                 QuoteColumns.ISCURRENT + " = ?",
                 new String[]{"1"},
                 null);
@@ -241,6 +233,11 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if (data.getCount() == 0) {
+            noDataTextView.setVisibility(View.VISIBLE);
+        } else {
+            noDataTextView.setVisibility(View.GONE);
+        }
         mCursorAdapter.swapCursor(data);
         mCursor = data;
     }
@@ -254,8 +251,9 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
     protected void onStart() {
         super.onStart();
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(ACTION_UPDATE_UI);
         intentFilter.addAction(ACTION_NO_SYM_ALERT);
+        intentFilter.addAction(ACTION_SYM_ADDED);
+        intentFilter.addAction(ACTION_FINISHED_LOADING_QUOTES);
         LocalBroadcastManager.getInstance(this).registerReceiver((localBroadcastReceiver), intentFilter);
 
     }
@@ -264,5 +262,30 @@ dialog = new MaterialDialog.Builder(this).progress(true,0).title("Searching Symb
     protected void onStop() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(localBroadcastReceiver);
         super.onStop();
+    }
+private void fetchLatestQuotes(){
+    swipeRefreshLayout.setRefreshing(true);
+    mServiceIntent = new Intent(this, StockIntentService.class);
+    mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_INIT);
+    startService(mServiceIntent);
+}
+    private class MyLocalReceiver extends BroadcastReceiver{
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            switch (action) {
+                case ACTION_NO_SYM_ALERT:
+                    addQuoteProgressBar.setVisibility(View.GONE);
+                    Toast.makeText(MyStocksActivity.this, "No such symbol found", Toast.LENGTH_LONG).show();
+                    break;
+                case ACTION_SYM_ADDED:
+                    addQuoteProgressBar.setVisibility(View.GONE);
+                    Toast.makeText(MyStocksActivity.this, "Added succesfully", Toast.LENGTH_LONG).show();
+                    break;
+                case ACTION_FINISHED_LOADING_QUOTES:
+                    swipeRefreshLayout.setRefreshing(false);
+                default:
+            }
+        }
     }
 }
