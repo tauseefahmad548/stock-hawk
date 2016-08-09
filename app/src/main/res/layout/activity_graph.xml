@@ -23,7 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?colorPrimary"
-                android:text="New Text"
+                android:text="Date"
                 android:gravity="center" />
 
     <ScrollView
@@ -125,7 +125,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1" />
             </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp"
+                android:text="@string/tip"/>
         </LinearLayout>
+
     </ScrollView>
 
 

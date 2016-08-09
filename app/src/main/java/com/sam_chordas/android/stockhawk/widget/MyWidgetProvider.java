@@ -1,5 +1,6 @@
 package com.sam_chordas.android.stockhawk.widget;
 
+import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
@@ -8,6 +9,7 @@ import android.net.Uri;
 import android.widget.RemoteViews;
 
 import com.sam_chordas.android.stockhawk.R;
+import com.sam_chordas.android.stockhawk.ui.GraphActivity;
 
 /**
  * Created by Tauseef Ahmad on 8/3/2016.
@@ -40,7 +42,9 @@ public class MyWidgetProvider extends AppWidgetProvider {
             //
             // Do additional processing specific to this app widget...
             //
-
+            Intent intentGraph = new Intent(context, GraphActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intentGraph, PendingIntent.FLAG_UPDATE_CURRENT);
+            rv.setPendingIntentTemplate(R.id.widget_list_view, pendingIntent);
             appWidgetManager.updateAppWidget(appWidgetIds[i], rv);
         }
         super.onUpdate(context, appWidgetManager, appWidgetIds);

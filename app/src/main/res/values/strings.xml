@@ -20,4 +20,8 @@
     <string name="high">High</string>
     <string name="close">Close</string>
     <string name="volume">Volume</string>
+    <string name="tip">Tip: To zoom pinch or double tap. You can drag chart and select any point to see its details.</string>
+    <string name="add_new_quote_symbol">Add new quote symbol</string>
+    <string name="no_such_symbol">No such symbol found</string>
+    <string name="added_successfully">Added successfully</string>
 </resources>

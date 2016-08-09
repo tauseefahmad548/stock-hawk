@@ -1,7 +1,9 @@
 package com.sam_chordas.android.stockhawk.ui;
 
 import android.app.LoaderManager;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
@@ -40,6 +42,7 @@ import com.sam_chordas.android.stockhawk.rest.Utils;
 import com.sam_chordas.android.stockhawk.service.StockIntentService;
 import com.sam_chordas.android.stockhawk.service.StockTaskService;
 import com.sam_chordas.android.stockhawk.touch_helper.SimpleItemTouchHelperCallback;
+import com.sam_chordas.android.stockhawk.widget.MyWidgetProvider;
 
 public class MyStocksActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -72,10 +75,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_layout);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         localBroadcastReceiver = new MyLocalReceiver();
-
-        ConnectivityManager cm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+        isConnected = isConnected();
 
 
         // The intent service is for executing immediate pulls from the Yahoo API
@@ -134,7 +134,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                                             toast.show();
                                             return;
                                         } else {
-                                            // Add the stock to DB
+                                            mServiceIntent = new Intent(MyStocksActivity.this, StockIntentService.class);
                                             mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_ADD);
                                             mServiceIntent.putExtra(StockTaskService.KEY_SYMBOL, input.toString());
                                             startService(mServiceIntent);
@@ -156,12 +156,6 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         if (savedInstanceState == null) {
             // Run the initialize task service so that some stocks appear upon an empty database
             if (isConnected) {
-                swipeRefreshLayout.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        swipeRefreshLayout.setRefreshing(true);
-                    }
-                });
                 fetchLatestQuotes();
 
                 long period = 3600L;
@@ -196,7 +190,6 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
     public void networkToast() {
         Toast.makeText(mContext, getString(R.string.network_toast), Toast.LENGTH_SHORT).show();
     }
-
 
 
     @Override
@@ -263,27 +256,51 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         LocalBroadcastManager.getInstance(this).unregisterReceiver(localBroadcastReceiver);
         super.onStop();
     }
-private void fetchLatestQuotes(){
-    swipeRefreshLayout.setRefreshing(true);
-    mServiceIntent = new Intent(this, StockIntentService.class);
-    mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_INIT);
-    startService(mServiceIntent);
-}
-    private class MyLocalReceiver extends BroadcastReceiver{
+
+    private boolean isConnected() {
+        ConnectivityManager cm = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+    }
+
+    private void updateWidgets() {
+        int[] ids = AppWidgetManager.getInstance(this).getAppWidgetIds(new ComponentName(this, MyWidgetProvider.class));
+        AppWidgetManager.getInstance(this).notifyAppWidgetViewDataChanged(ids, R.id.widget_list_view);
+    }
+
+    private void fetchLatestQuotes() {
+        if (isConnected()) {
+            swipeRefreshLayout.post(new Runnable() {
+                @Override
+                public void run() {
+                    swipeRefreshLayout.setRefreshing(true);
+                }
+            });
+            mServiceIntent = new Intent(this, StockIntentService.class);
+            mServiceIntent.putExtra(StockIntentService.KEY_TAG, StockTaskService.TAG_INIT);
+            startService(mServiceIntent);
+        } else {
+            Toast.makeText(this, R.string.network_error, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private class MyLocalReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             switch (action) {
                 case ACTION_NO_SYM_ALERT:
                     addQuoteProgressBar.setVisibility(View.GONE);
-                    Toast.makeText(MyStocksActivity.this, "No such symbol found", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MyStocksActivity.this, R.string.no_such_symbol, Toast.LENGTH_LONG).show();
                     break;
                 case ACTION_SYM_ADDED:
                     addQuoteProgressBar.setVisibility(View.GONE);
-                    Toast.makeText(MyStocksActivity.this, "Added succesfully", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MyStocksActivity.this, R.string.added_successfully, Toast.LENGTH_LONG).show();
+                    updateWidgets();
                     break;
                 case ACTION_FINISHED_LOADING_QUOTES:
                     swipeRefreshLayout.setRefreshing(false);
+                    updateWidgets();
                 default:
             }
         }
