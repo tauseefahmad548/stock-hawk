@@ -11,6 +11,8 @@
         android:layout_height="48dp"
         android:gravity="center_vertical"
         android:paddingLeft="16dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         android:textColor="@color/primary_text_dark"
         android:background="@color/material_blue_500"
         android:text="Stock Hawk"/>

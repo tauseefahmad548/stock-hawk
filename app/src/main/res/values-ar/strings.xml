@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Stock Hawk</string>
+    <string name="low">منخفض</string>
+    <string name="high">عالي</string>
+    <string name="open">بداية</string>
+    <string name="volume">مجموع</string>
+    <string name="network_error">خطأ في الشبكة</string>
+    <string name="loading_data">تحميل البيانات…</string>
+    <string name="close">النهاية</string>
+    <string name="no_such_symbol">لم يتم العثور على رمز من هذا القبيل</string>
+    <string name="no_data_available_yet">لا توجد بيانات حتى الآن</string>
+    <string name="stock_already_saved" translatable="false">تم حفظ هذا الرمز بالفعل</string>
+    <string name="tip">نصيحة: يمكنك تكبير أو سحب التخطيط و تحديد أي نقطة لمعرفة تفاصيلها </string>
+    <string name="action_change_units" translatable="false">وحدات التغيير</string>
+    <string name="action_settings" translatable="false">إعدادات</string>
+    <string name="add_new_quote_symbol">إضافة رمز جديد</string>
+    <string name="added_successfully">وأضاف بنجاح</string>
+    <string name="network_toast">هذا التطبيق يتطلب اتصال بالإنترنت</string>
+    <string name="symbol_search">رمز البحث</string>
 </resources>
